@@ -13,6 +13,12 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+/**
+ * A builder class for constructing UI elements with a hierarchical structure and configurable 
+ * properties. The {@code UIElementBuilder} class provides an API for specifying attributes such 
+ * as styles, visibility, children, tooltips, custom callbacks, and more. This class is intended 
+ * to be extended and further customized.
+ */
 public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
     protected final Theme theme;
     protected String elementPath;
@@ -23,7 +29,6 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
     protected final List<UIEventListener<?>> listeners = new ArrayList<>();
     protected final List<UIElementBuilder<?>> children = new ArrayList<>();
     protected String parentSelector = "#Content";
-    protected int offset = -1;
     protected String typeSelector;
     protected boolean wrapInGroup = false;
     protected HyUIAnchor anchor;
@@ -45,43 +50,12 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
         this.id = generateUniqueId();
     }
 
-    private String generateUniqueId() {
-        String base = elementPath;
-        if (base != null) {
-            // Get last part of the path
-            int lastSlash = base.lastIndexOf('/');
-            if (lastSlash != -1) {
-                base = base.substring(lastSlash + 1);
-            }
-            // Replace .ui with blank
-            base = base.replace(".ui", "")
-                    .replace("$C.@", "");
-        } else {
-            base = "Element";
-        }
-        return base + (idCounter++);
-    }
+    protected abstract void onBuild(UICommandBuilder commands, UIEventBuilder events);
 
-    protected String determineTypeSelector(String elementPath) {
-        if (elementPath == null) return null;
-        // Extract the base type from the element path
-        // e.g., "$C.@TextButton" -> "#HyUITextButton"
-        // e.g., "Group" -> "Group"
-        if (elementPath.contains("TextButton")) return "#HyUITextButton";
-        if (elementPath.contains("CancelTextButton")) return "#HyUICancelTextButton";
-        if (elementPath.contains("TextField")) return "#HyUITextField";
-        if (elementPath.contains("CheckBox")) return "#HyUICheckBox";
-        if (elementPath.contains("ColorPicker")) return "#HyUIColorPicker";
-        if (elementPath.contains("NumberField")) return "#HyUINumberField";
-        if (elementPath.contains("Label")) return "Label";
-        if (elementPath.contains("Group")) return "Group";
-        return elementPath;
+    protected boolean supportsStyling() {
+        return false;
     }
-
-    protected boolean isFilePath() {
-        return elementPath != null && elementPath.endsWith(".ui");
-    }
-
+    
     public T withUiFile(String uiFilePath) {
         this.uiFilePath = uiFilePath;
         return (T) this;
@@ -91,24 +65,41 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
         this.children.add(child);
         return (T) this;
     }
+    
+    public String getEffectiveId() {
+        return id;
+    }
 
-    protected String getAppendPath() {
-        if (uiFilePath != null) {
-            return uiFilePath;
-        }
+    public String getElementPath() {
         return elementPath;
     }
 
-    protected String generateBasicInlineMarkup() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(elementPath);
-        if (id != null && !wrapInGroup) {
-            sb.append(" #").append(id);
-        }
-        sb.append(" {}");
-        return sb.toString();
+    public String getId() {
+        return id;
     }
 
+    /**
+     * @return true if the element uses the @Value (or data-type equiv.) (RefValue) property for its value in events.
+     */
+    protected boolean usesRefValue() {
+        return false;
+    }
+
+    /**
+     * @return the list of event listeners associated with this element
+     */
+    public List<UIEventListener<?>> getListeners() {
+        return listeners;
+    }
+
+    public static void resetIdCounter() {
+        idCounter = 0;
+    }
+
+    /**
+     * @param id the id to set for the element, without leading #.
+     * @return the builder instance for method chaining
+     */
     @SuppressWarnings("unchecked")
     public T withId(String id) {
         if (id != null) {
@@ -117,12 +108,24 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
         return (T) this;
     }
 
+    /**
+     * Deprecated. For removal.
+     * @param style the style to apply to the element
+     * @return the builder instance for method chaining
+     */
+    @Deprecated(forRemoval = true)
     @SuppressWarnings("unchecked")
     public T withStyle(String style) {
         this.style = style;
         return (T) this;
     }
 
+    /**
+     * Applies the specified style to the current UI element if styling is supported.
+     * 
+     * @param style the {@code HyUIStyle} instance to be applied to the UI element
+     * @return the builder instance of type {@code T} for method chaining
+     */
     @SuppressWarnings("unchecked")
     public T withStyle(HyUIStyle style) {
         if (supportsStyling()) {
@@ -131,63 +134,113 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
         return (T) this;
     }
 
-    protected boolean supportsStyling() {
-        return false;
-    }
-
+    /**
+     * Sets the parent selector for the UI element being built.
+     * The parent selector specifies the selector of the parent element 
+     * in which this element will be nested.
+     *
+     * @param parentSelector the selector of the parent element
+     * @return the builder instance of type {@code T} for method chaining
+     */
     @SuppressWarnings("unchecked")
     public T inside(String parentSelector) {
         this.parentSelector = parentSelector;
         return (T) this;
     }
 
+    /**
+     * Configures whether the element should be wrapped in a grouping element.
+     * This does not need to be accessed by a mod author.
+     *
+     * @param wrapInGroup a boolean indicating whether the element should be wrapped in a grouping element
+     * @return the builder instance of type {@code T} for method chaining
+     */
     @SuppressWarnings("unchecked")
-    public T withWrappingGroup(boolean wrapInGroup) {
+    protected T withWrappingGroup(boolean wrapInGroup) {
         this.wrapInGroup = wrapInGroup;
         return (T) this;
     }
 
+    /**
+     * Sets the anchor configuration for the UI element being built.
+     * The anchor specifies the positional and sizing constraints for the element.
+     *
+     * @param anchor the {@code HyUIAnchor} instance containing the anchor configuration
+     * @return the builder instance of type {@code T} for method chaining
+     */
     @SuppressWarnings("unchecked")
     public T withAnchor(HyUIAnchor anchor) {
         this.anchor = anchor;
         return (T) this;
     }
 
+    /**
+     * Configures the visibility of the UI element.
+     *
+     * @param visible a boolean indicating whether the element should be visible
+     * @return the builder instance of type {@code T} for method chaining
+     */
     @SuppressWarnings("unchecked")
     public T withVisible(boolean visible) {
         this.visible = visible;
         return (T) this;
     }
 
+    /**
+     * Configures the tooltip text span for the UI element.
+     * This is displayed in-game on mouse hover.
+     *
+     * @param message the message to be displayed as tooltip
+     * @return the builder instance of type {@code T} for method chaining
+     */
     @SuppressWarnings("unchecked")
     public T withTooltipTextSpan(Message message) {
         this.tooltipTextSpan = message;
         return (T) this;
     }
 
+    /**
+     * Registers a callback to modify the UI element after its initial configuration.
+     * This method adds the provided callback to a list of "edit after" callbacks,
+     * which will be executed after the element is built or modified.
+     *
+     * @param callback a {@code BiConsumer} that accepts a {@code UICommandBuilder} instance
+     *                 and a {@code String} as parameters. The {@code UICommandBuilder}
+     *                 is used to modify the UI commands, and the {@code String} represents
+     *                 the element's path or identifier.
+     * @return the current builder instance of type {@code T} for method chaining
+     */
     @SuppressWarnings("unchecked")
     public T editElementAfter(BiConsumer<UICommandBuilder, String> callback) {
         this.editAfterCallbacks.add(callback);
         return (T) this;
     }
 
+    /**
+     * Registers a callback to modify the UI element before its initial configuration.
+     * This method adds the provided callback to a list of "edit before" callbacks,
+     * which will be executed before the element is built or modified.
+     *
+     * @param callback a {@code BiConsumer} that accepts a {@code UICommandBuilder} instance
+     *                 and a {@code String} as parameters. The {@code UICommandBuilder}
+     *                 is used to modify the UI commands, and the {@code String} represents 
+     *                 the element's path or identifier.
+     * @return the current builder instance of type {@code T} for method chaining
+     */
     @SuppressWarnings("unchecked")
     public T editElementBefore(BiConsumer<UICommandBuilder, String> callback) {
         this.editBeforeCallbacks.add(callback);
         return (T) this;
     }
 
-    protected Set<String> getUnsupportedStyleProperties() {
-        return Set.of();
-    }
-
-    @SuppressWarnings("unchecked")
-    protected <V> T addEventListenerInternal(CustomUIEventBindingType type, Consumer<V> callback) {
-        this.listeners.add(new UIEventListener<>(type, callback));
-        return (T) this;
-    }
-
-    public void build(UICommandBuilder commands, UIEventBuilder events) {
+    /**
+     * Handles the building process of a UI element, optionally wrapping it in a group if configured.
+     * This method modifies the structure and commands for the UI element being constructed.
+     *
+     * @param commands an instance of {@code UICommandBuilder} used to construct UI commands
+     * @param events   an instance of {@code UIEventBuilder} used to register and handle UI events
+     */
+    protected void build(UICommandBuilder commands, UIEventBuilder events) {
         if (wrapInGroup && parentSelector != null) {
             String wrappingGroupId = getWrappingGroupId();
             HyUIPlugin.getInstance().logInfo("Creating wrapping group: #" + wrappingGroupId + " for element: " + (typeSelector != null ? typeSelector : elementPath));
@@ -200,22 +253,6 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
             parentSelector = originalParent;
         } else {
             executeBuild(commands, events);
-        }
-    }
-
-    private void executeBuild(UICommandBuilder commands, UIEventBuilder events) {
-        buildBase(commands, events);
-
-        String selector = getSelector();
-        for (BiConsumer<UICommandBuilder, String> callback : editBeforeCallbacks) {
-            callback.accept(commands, selector);
-        }
-
-        onBuild(commands, events);
-        buildChildren(commands, events);
-
-        for (BiConsumer<UICommandBuilder, String> callback : editAfterCallbacks) {
-            callback.accept(commands, selector);
         }
     }
 
@@ -262,8 +299,67 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
         }
     }
 
-    protected abstract void onBuild(UICommandBuilder commands, UIEventBuilder events);
+    protected String determineTypeSelector(String elementPath) {
+        if (elementPath == null) return null;
+        // Extract the base type from the element path
+        // e.g., "$C.@TextButton" -> "#HyUITextButton"
+        // e.g., "Group" -> "Group"
+        if (elementPath.contains("TextButton")) return "#HyUITextButton";
+        if (elementPath.contains("CancelTextButton")) return "#HyUICancelTextButton";
+        if (elementPath.contains("TextField")) return "#HyUITextField";
+        if (elementPath.contains("CheckBox")) return "#HyUICheckBox";
+        if (elementPath.contains("ColorPicker")) return "#HyUIColorPicker";
+        if (elementPath.contains("NumberField")) return "#HyUINumberField";
+        if (elementPath.contains("Label")) return "Label";
+        if (elementPath.contains("Group")) return "Group";
+        return elementPath;
+    }
 
+    protected boolean isFilePath() {
+        return elementPath != null && elementPath.endsWith(".ui");
+    }
+
+    protected Set<String> getUnsupportedStyleProperties() {
+        return Set.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <V> T addEventListenerInternal(CustomUIEventBindingType type, Consumer<V> callback) {
+        this.listeners.add(new UIEventListener<>(type, callback));
+        return (T) this;
+    }
+
+    protected String getAppendPath() {
+        if (uiFilePath != null) {
+            return uiFilePath;
+        }
+        return elementPath;
+    }
+
+    protected String generateBasicInlineMarkup() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(elementPath);
+        if (id != null && !wrapInGroup) {
+            sb.append(" #").append(id);
+        }
+        sb.append(" {}");
+        return sb.toString();
+    }
+
+    protected String getSelector() {
+        if (wrapInGroup) {
+            return "#" + id + " " + typeSelector;
+        }
+        return "#" + id;
+    }
+
+    /**
+     * Applies the provided style settings to the given command builder while handling unsupported properties.
+     *
+     * @param commands The UICommandBuilder used to set style properties.
+     * @param prefix A string used as a prefix for property keys when applying the styles.
+     * @param style An instance of HyUIStyle containing the properties to be applied to the command builder.
+     */
     protected void applyStyle(UICommandBuilder commands, String prefix, HyUIStyle style) {
         Set<String> unsupported = getUnsupportedStyleProperties();
         if (style.getFontSize() != null && !unsupported.contains("FontSize")) {
@@ -309,6 +405,16 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
         return id;
     }
 
+    /**
+     * Builds the child elements of the current UI element and registers their commands
+     * and events within the provided builders. If the current element has a selector, 
+     * each child is nested inside that selector during the build process.
+     *
+     * @param commands an instance of {@code UICommandBuilder} used for constructing 
+     *                 UI commands associated with the child elements
+     * @param events   an instance of {@code UIEventBuilder} used for setting up event 
+     *                 handling for the child elements
+     */
     protected void buildChildren(UICommandBuilder commands, UIEventBuilder events) {
         String selector = getSelector();
         if (selector != null) {
@@ -318,37 +424,36 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
         }
     }
 
-    public String getEffectiveId() {
-        return id;
-    }
+    private void executeBuild(UICommandBuilder commands, UIEventBuilder events) {
+        buildBase(commands, events);
 
-    public String getElementPath() {
-        return elementPath;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    /**
-     * @return true if the element uses the @Value (or data-type equiv.) (RefValue) property for its value in events.
-     */
-    public boolean usesRefValue() {
-        return false;
-    }
-
-    public List<UIEventListener<?>> getListeners() {
-        return listeners;
-    }
-
-    protected String getSelector() {
-        if (wrapInGroup) {
-            return "#" + id + " " + typeSelector;
+        String selector = getSelector();
+        for (BiConsumer<UICommandBuilder, String> callback : editBeforeCallbacks) {
+            callback.accept(commands, selector);
         }
-        return "#" + id;
+
+        onBuild(commands, events);
+        buildChildren(commands, events);
+
+        for (BiConsumer<UICommandBuilder, String> callback : editAfterCallbacks) {
+            callback.accept(commands, selector);
+        }
     }
 
-    public static void resetIdCounter() {
-        idCounter = 0;
+    private String generateUniqueId() {
+        String base = elementPath;
+        if (base != null) {
+            // Get last part of the path
+            int lastSlash = base.lastIndexOf('/');
+            if (lastSlash != -1) {
+                base = base.substring(lastSlash + 1);
+            }
+            // Replace .ui with blank
+            base = base.replace(".ui", "")
+                    .replace("$C.@", "");
+        } else {
+            base = "Element";
+        }
+        return base + (idCounter++);
     }
 }

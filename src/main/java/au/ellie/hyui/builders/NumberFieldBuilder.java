@@ -12,14 +12,22 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 
 import java.util.function.Consumer;
 
+/**
+ * A builder class for constructing a number input field UI element. This class extends 
+ * the UIElementBuilder to provide functionality specific to creating and customizing 
+ * number input fields.
+ *
+ * The NumberFieldBuilder supports setting the initial numeric value, attaching event 
+ * listeners, and integrating with specific themes and styles. It facilitates the seamless 
+ * generation of commands and events during the UI build phase.
+ */
 public class NumberFieldBuilder extends UIElementBuilder<NumberFieldBuilder> {
     private Double value;
 
-    public NumberFieldBuilder() {
-        super(UIElements.TEXT_FIELD);
-        withWrappingGroup(true);
-    }
-
+    /**
+     * Do not use. Instead, use the static .numberInput().
+     * @param theme
+     */
     public NumberFieldBuilder(Theme theme) {
         super(theme, UIElements.MACRO_NUMBER_FIELD);
         withWrappingGroup(true);
@@ -28,21 +36,42 @@ public class NumberFieldBuilder extends UIElementBuilder<NumberFieldBuilder> {
         }
     }
 
+    /**
+     * Creates a new instance of {@code NumberFieldBuilder} configured for the game theme.
+     *
+     * @return a new {@code NumberFieldBuilder} instance for defining and customizing a number input field.
+     */
     public static NumberFieldBuilder numberInput() {
         return new NumberFieldBuilder(Theme.GAME_THEME);
     }
-    
+
+    /**
+     * Sets the value for the number input field.
+     *
+     * @param value the numeric value to be set for the number input field
+     * @return the current instance of {@code NumberFieldBuilder} for method chaining
+     */
     public NumberFieldBuilder withValue(double value) {
         this.value = value;
         return this;
     }
 
+    /**
+     * Adds an event listener to the number field builder. The only type it accepts will be ValueChanged.
+     *
+     * @param type     the type of the event to listen for, represented by {@code CustomUIEventBindingType}. 
+     *                 This defines the specific event binding, such as {@code ValueChanged}.
+     * @param callback the function to execute when the specified event occurs. The callback receives 
+     *                 a {@code Double} value, which typically represents the current numeric value 
+     *                 associated with the event.
+     * @return the current instance of {@code NumberFieldBuilder}, enabling method chaining.
+     */
     public NumberFieldBuilder addEventListener(CustomUIEventBindingType type, Consumer<Double> callback) {
         return addEventListenerInternal(type, callback);
     }
 
     @Override
-    public boolean usesRefValue() {
+    protected boolean usesRefValue() {
         return true;
     }
 

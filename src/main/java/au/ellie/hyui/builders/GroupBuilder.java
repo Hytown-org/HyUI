@@ -9,6 +9,12 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import java.util.Collections;
 import java.util.Set;
 
+/**
+ * Builder for creating group UI elements. 
+ * Groups can be used to organize and layout other UI elements.
+ * 
+ * This directly translates to a {@code Group {}}
+ */
 public class GroupBuilder extends UIElementBuilder<GroupBuilder> {
     private String layoutMode;
 
@@ -20,6 +26,15 @@ public class GroupBuilder extends UIElementBuilder<GroupBuilder> {
         super(theme, UIElements.GROUP);
     }
 
+    /**
+     * Sets the layout mode for the group.
+     * 
+     * Choose from: Left, Top, TopScrolling, Right, Full.
+     * 
+     * 
+     * @param layoutMode The layout mode to set.
+     * @return This builder instance for method chaining.
+     */
     public GroupBuilder withLayoutMode(String layoutMode) {
         this.layoutMode = layoutMode;
         return this;

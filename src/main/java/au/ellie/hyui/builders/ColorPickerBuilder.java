@@ -12,32 +12,57 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 
 import java.util.function.Consumer;
 
+/**
+ * Builder for creating ColorPicker UI element.
+ */
 public class ColorPickerBuilder extends UIElementBuilder<ColorPickerBuilder> {
     private String value;
 
+    /**
+     * Constructs a new instance of {@code ColorPickerBuilder}, initializing it with
+     * default configuration for creating a ColorPicker UI element.
+     *
+     * The builder is pre-configured with:
+     * - The element type defined by {@code UIElements.COLOR_PICKER}.
+     * - A wrapping group setting enabled.
+     */
     public ColorPickerBuilder() {
         super(UIElements.COLOR_PICKER);
         withWrappingGroup(true);
         withUiFile("Pages/Elements/ColorPicker.ui");
     }
 
-    public ColorPickerBuilder(Theme theme) {
-        super(theme, UIElements.COLOR_PICKER);
-        withWrappingGroup(true);
-        withUiFile("Pages/Elements/ColorPicker.ui");
-    }
-    
+    /**
+     * Sets the value for the ColorPicker UI element in hexadecimal color code format.
+     *
+     * @param hexColor the hexadecimal color code value to set, represented as a string.
+     *                 For example, "#FFFFFF" for white or "#000000" for black. You
+     *                 may add the alpha channel to the end like "#FFFFFF(0.5)".
+     * @return the {@code ColorPickerBuilder} instance with the updated value,
+     *         allowing for method chaining.
+     */
     public ColorPickerBuilder withValue(String hexColor) {
         this.value = hexColor;
         return this;
     }
 
+    /**
+     * Adds an event listener to the ColorPicker UI element for handling specific types of events.
+     * The specified callback will be invoked when the event of the provided type occurs.
+     *
+     * @param type the type of event to listen for, represented by {@code CustomUIEventBindingType}.
+     *             This determines which event the callback will respond to.
+     * @param callback a {@code Consumer<String>} function to handle the event.
+     *                 It will be triggered with the event data when the event occurs.
+     * @return the {@code ColorPickerBuilder} instance with the event listener added,
+     *         allowing for method chaining.
+     */
     public ColorPickerBuilder addEventListener(CustomUIEventBindingType type, Consumer<String> callback) {
         return addEventListenerInternal(type, callback);
     }
 
     @Override
-    public boolean usesRefValue() {
+    protected boolean usesRefValue() {
         return true;
     }
 

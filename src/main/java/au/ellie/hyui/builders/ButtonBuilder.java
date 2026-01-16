@@ -14,14 +14,24 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.function.Consumer;
 
+/**
+ * Builder for creating button UI elements. 
+ * Buttons are interactive elements that can trigger actions when clicked.
+ */
 public class ButtonBuilder extends UIElementBuilder<ButtonBuilder> {
     private String text;
 
+    /**
+     * You do not need to call this.
+     */
     public ButtonBuilder() {
         super(UIElements.BUTTON);
         withWrappingGroup(true);
     }
-
+    
+    /**
+     * You do not need to call this.
+     */
     public ButtonBuilder(Theme theme) {
         super(theme, UIElements.BUTTON);
         withWrappingGroup(true);
@@ -30,6 +40,12 @@ public class ButtonBuilder extends UIElementBuilder<ButtonBuilder> {
         }
     }
 
+    /**
+     * You do not need to call this.
+     * 
+     * @param theme
+     * @param elementPath
+     */
     public ButtonBuilder(Theme theme, String elementPath) {
         super(theme, elementPath);
         withWrappingGroup(true);
@@ -42,19 +58,44 @@ public class ButtonBuilder extends UIElementBuilder<ButtonBuilder> {
         }
     }
 
+    /**
+     * Creates a ButtonBuilder instance for a text-based button styled with the GAME_THEME and the TEXT_BUTTON element.
+     *
+     * @return a ButtonBuilder configured for creating a text button with predefined theme and style.
+     */
     public static ButtonBuilder textButton() {
         return new ButtonBuilder(Theme.GAME_THEME, UIElements.TEXT_BUTTON);
     }
 
+    /**
+     * Creates a ButtonBuilder instance for a cancel text button styled with the GAME_THEME and 
+     * the CANCEL_TEXT_BUTTON element.
+     *
+     * @return a ButtonBuilder configured for creating a cancel text button with predefined theme and style.
+     */
     public static ButtonBuilder cancelTextButton() {
         return new ButtonBuilder(Theme.GAME_THEME, UIElements.CANCEL_TEXT_BUTTON);
     }
 
+    /**
+     * Sets the text for the button being built. Replaces any other text.
+     *
+     * @param text the text to be displayed on the button
+     * @return the current instance of ButtonBuilder for method chaining
+     */
     public ButtonBuilder withText(String text) {
         this.text = text;
         return this;
     }
 
+    /**
+     * Adds an event listener to this button. This allows the button to respond to specific UI events
+     * that are triggered during interaction.
+     *
+     * @param type the type of UI event to listen for, specified as a {@link CustomUIEventBindingType}
+     * @param callback a callback function to handle the event, expressed as a {@link Consumer<Void>}
+     * @return the current instance of {@code ButtonBuilder} for method chaining
+     */
     public ButtonBuilder addEventListener(CustomUIEventBindingType type, Consumer<Void> callback) {
         return addEventListenerInternal(type, callback);
     }
