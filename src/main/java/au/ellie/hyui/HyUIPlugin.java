@@ -20,7 +20,7 @@ public class HyUIPlugin extends JavaPlugin {
     public HyUIPlugin(@Nonnull JavaPluginInit init) {
         super(init);
         instance = this;
-        loggingEnabled = false;
+        loggingEnabled = true;
     }
 
     public void logInfo(String message) {

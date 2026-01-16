@@ -1,6 +1,7 @@
 package au.ellie.hyui.builders;
 
 import au.ellie.hyui.HyUIPlugin;
+import au.ellie.hyui.events.UIContext;
 import au.ellie.hyui.events.UIEventActions;
 import au.ellie.hyui.elements.UIElements;
 import au.ellie.hyui.theme.Theme;
@@ -10,6 +11,7 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -53,6 +55,7 @@ public class NumberFieldBuilder extends UIElementBuilder<NumberFieldBuilder> {
      */
     public NumberFieldBuilder withValue(double value) {
         this.value = value;
+        this.initialValue = value;
         return this;
     }
 
@@ -67,6 +70,17 @@ public class NumberFieldBuilder extends UIElementBuilder<NumberFieldBuilder> {
      * @return the current instance of {@code NumberFieldBuilder}, enabling method chaining.
      */
     public NumberFieldBuilder addEventListener(CustomUIEventBindingType type, Consumer<Double> callback) {
+        return addEventListenerInternal(type, callback);
+    }
+
+    /**
+     * Adds an event listener to the number field builder with access to the UI context.
+     *
+     * @param type     The type of the event to bind the listener to.
+     * @param callback The function to be executed when the specified event is triggered, with UI context.
+     * @return This NumberFieldBuilder instance for method chaining.
+     */
+    public NumberFieldBuilder addEventListener(CustomUIEventBindingType type, BiConsumer<Double, UIContext> callback) {
         return addEventListenerInternal(type, callback);
     }
 

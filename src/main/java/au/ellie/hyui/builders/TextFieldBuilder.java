@@ -1,6 +1,7 @@
 package au.ellie.hyui.builders;
 
 import au.ellie.hyui.HyUIPlugin;
+import au.ellie.hyui.events.UIContext;
 import au.ellie.hyui.events.UIEventActions;
 import au.ellie.hyui.elements.UIElements;
 import au.ellie.hyui.theme.Theme;
@@ -11,6 +12,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -73,6 +75,7 @@ public class TextFieldBuilder extends UIElementBuilder<TextFieldBuilder> {
      */
     public TextFieldBuilder withValue(String value) {
         this.value = value;
+        this.initialValue = value;
         return this;
     }
 
@@ -86,6 +89,17 @@ public class TextFieldBuilder extends UIElementBuilder<TextFieldBuilder> {
      * @return This TextFieldBuilder instance for method chaining.
      */
     public TextFieldBuilder addEventListener(CustomUIEventBindingType type, Consumer<String> callback) {
+        return addEventListenerInternal(type, callback);
+    }
+
+    /**
+     * Adds an event listener to the text field builder with access to the UI context.
+     *
+     * @param type     The type of the event to bind the listener to.
+     * @param callback The function to be executed when the specified event is triggered, with UI context.
+     * @return This TextFieldBuilder instance for method chaining.
+     */
+    public TextFieldBuilder addEventListener(CustomUIEventBindingType type, BiConsumer<String, UIContext> callback) {
         return addEventListenerInternal(type, callback);
     }
     

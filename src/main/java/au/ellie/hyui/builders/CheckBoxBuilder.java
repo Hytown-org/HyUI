@@ -1,6 +1,7 @@
 package au.ellie.hyui.builders;
 
 import au.ellie.hyui.HyUIPlugin;
+import au.ellie.hyui.events.UIContext;
 import au.ellie.hyui.events.UIEventActions;
 import au.ellie.hyui.elements.UIElements;
 import au.ellie.hyui.theme.Theme;
@@ -10,6 +11,7 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -38,6 +40,7 @@ public class CheckBoxBuilder extends UIElementBuilder<CheckBoxBuilder> {
      */
     public CheckBoxBuilder withValue(boolean value) {
         this.value = value;
+        this.initialValue = value;
         return this;
     }
 
@@ -61,6 +64,17 @@ public class CheckBoxBuilder extends UIElementBuilder<CheckBoxBuilder> {
      * @return the {@code CheckBoxBuilder} instance for method chaining, allowing further configuration
      */
     public CheckBoxBuilder addEventListener(CustomUIEventBindingType type, Consumer<Boolean> callback) {
+        return addEventListenerInternal(type, callback);
+    }
+
+    /**
+     * Adds an event listener to the checkbox builder with access to the UI context.
+     *
+     * @param type     The type of the event to bind the listener to.
+     * @param callback The function to be executed when the specified event is triggered, with UI context.
+     * @return This CheckBoxBuilder instance for method chaining.
+     */
+    public CheckBoxBuilder addEventListener(CustomUIEventBindingType type, BiConsumer<Boolean, UIContext> callback) {
         return addEventListenerInternal(type, callback);
     }
 

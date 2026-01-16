@@ -3,6 +3,7 @@ package au.ellie.hyui.builders;
 import au.ellie.hyui.HyUIPlugin;
 import au.ellie.hyui.events.UIEventActions;
 import au.ellie.hyui.elements.UIElements;
+import au.ellie.hyui.events.UIContext;
 import au.ellie.hyui.theme.Theme;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
@@ -12,6 +13,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 
 import java.util.Collections;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -97,6 +99,17 @@ public class ButtonBuilder extends UIElementBuilder<ButtonBuilder> {
      * @return the current instance of {@code ButtonBuilder} for method chaining
      */
     public ButtonBuilder addEventListener(CustomUIEventBindingType type, Consumer<Void> callback) {
+        return addEventListenerInternal(type, callback);
+    }
+
+    /**
+     * Adds an event listener to this button with access to the UI context.
+     *
+     * @param type the type of UI event to listen for, specified as a {@link CustomUIEventBindingType}
+     * @param callback a callback function to handle the event, expressed as a {@link BiConsumer<Void, UIContext>}
+     * @return the current instance of {@code ButtonBuilder} for method chaining
+     */
+    public ButtonBuilder addEventListener(CustomUIEventBindingType type, BiConsumer<Void, UIContext> callback) {
         return addEventListenerInternal(type, callback);
     }
 

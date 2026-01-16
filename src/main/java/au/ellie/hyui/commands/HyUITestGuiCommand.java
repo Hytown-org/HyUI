@@ -72,8 +72,10 @@ public class HyUITestGuiCommand extends AbstractAsyncCommand {
                                 })
                                 .withTooltipTextSpan(Message.raw("This button has a tooltip now!"))
                                 .withStyle(new HyUIStyle().setTextColor("#00FF00").setFontSize(16))
-                                .addEventListener(CustomUIEventBindingType.Activating, (ignored) -> {
-                                    playerRef.sendMessage(Message.raw("Text Button 1 clicked!"));
+                                .addEventListener(CustomUIEventBindingType.Activating, (ignored, ctx) -> {
+                                    String text = ctx.getValue("MyTextField", String.class).orElse("N/A");
+                                    Double num = ctx.getValue("ANum", Double.class).orElse(0.0);
+                                    playerRef.sendMessage(Message.raw("Text Field: " + text + ", Num: " + num));
                                 }))
                         .addChild(ButtonBuilder.textButton()
                                 .withId("SecondButton")
@@ -86,7 +88,7 @@ public class HyUITestGuiCommand extends AbstractAsyncCommand {
                                     playerRef.sendMessage(Message.raw("Text Button 2 clicked!"));
                                 }))
                         .addChild(TextFieldBuilder.textInput()
-                                //.withId("MyTextField")
+                                .withId("MyTextField")
                                 .withValue("Test Value")
                                 .addEventListener(CustomUIEventBindingType.ValueChanged, (val) -> {
                                     playerRef.sendMessage(Message.raw("Text Field changed to: " + val));

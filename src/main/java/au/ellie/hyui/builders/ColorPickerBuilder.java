@@ -1,6 +1,7 @@
 package au.ellie.hyui.builders;
 
 import au.ellie.hyui.HyUIPlugin;
+import au.ellie.hyui.events.UIContext;
 import au.ellie.hyui.events.UIEventActions;
 import au.ellie.hyui.elements.UIElements;
 import au.ellie.hyui.theme.Theme;
@@ -10,6 +11,7 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -43,6 +45,7 @@ public class ColorPickerBuilder extends UIElementBuilder<ColorPickerBuilder> {
      */
     public ColorPickerBuilder withValue(String hexColor) {
         this.value = hexColor;
+        this.initialValue = hexColor;
         return this;
     }
 
@@ -58,6 +61,17 @@ public class ColorPickerBuilder extends UIElementBuilder<ColorPickerBuilder> {
      *         allowing for method chaining.
      */
     public ColorPickerBuilder addEventListener(CustomUIEventBindingType type, Consumer<String> callback) {
+        return addEventListenerInternal(type, callback);
+    }
+
+    /**
+     * Adds an event listener to the ColorPicker UI element with access to the UI context.
+     *
+     * @param type     The type of the event to bind the listener to.
+     * @param callback The function to be executed when the specified event is triggered, with UI context.
+     * @return This ColorPickerBuilder instance for method chaining.
+     */
+    public ColorPickerBuilder addEventListener(CustomUIEventBindingType type, BiConsumer<String, UIContext> callback) {
         return addEventListenerInternal(type, callback);
     }
 

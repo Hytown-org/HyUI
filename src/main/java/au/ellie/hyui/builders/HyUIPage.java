@@ -2,6 +2,7 @@ package au.ellie.hyui.builders;
 
 import au.ellie.hyui.HyUIPlugin;
 import au.ellie.hyui.events.DynamicPageData;
+import au.ellie.hyui.events.UIContext;
 import au.ellie.hyui.events.UIEventActions;
 import au.ellie.hyui.events.UIEventListener;
 import com.hypixel.hytale.component.Ref;
@@ -15,13 +16,17 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
-public class HyUIPage extends InteractiveCustomUIPage<DynamicPageData> {
+public class HyUIPage extends InteractiveCustomUIPage<DynamicPageData> implements UIContext {
     private final String uiFile;
     private final List<UIElementBuilder<?>> elements;
     private final List<Consumer<UICommandBuilder>> editCallbacks;
+    private final Map<String, Object> elementValues = new HashMap<>();
 
     /**
      * Creates a new HyUIPage.
@@ -40,6 +45,11 @@ public class HyUIPage extends InteractiveCustomUIPage<DynamicPageData> {
         this.uiFile = uiFile;
         this.elements = elements;
         this.editCallbacks = editCallbacks;
+    }
+
+    @Override
+    public Optional<Object> getValue(String id) {
+        return Optional.ofNullable(elementValues.get(id));
     }
 
     /**
@@ -67,8 +77,20 @@ public class HyUIPage extends InteractiveCustomUIPage<DynamicPageData> {
             }
         }
 
+        elementValues.clear();
         for (UIElementBuilder<?> element : elements) {
+            captureInitialValues(element);
             element.build(uiCommandBuilder, uiEventBuilder);
+        }
+    }
+
+    private void captureInitialValues(UIElementBuilder<?> element) {
+        String id = element.getId();
+        if (id != null && element.initialValue != null) {
+            elementValues.put(id, element.initialValue);
+        }
+        for (UIElementBuilder<?> child : element.children) {
+            captureInitialValues(child);
         }
     }
 
@@ -95,33 +117,40 @@ public class HyUIPage extends InteractiveCustomUIPage<DynamicPageData> {
             for (UIEventListener<?> listener : element.getListeners()) {
                 if (listener.type() == CustomUIEventBindingType.Activating && UIEventActions.BUTTON_CLICKED.equals(data.action)) {
                     if (effectiveId.equals(target)) {
-                        ((UIEventListener<Void>) listener).callback().accept(null);
+                        ((UIEventListener<Void>) listener).callback().accept(null, this);
                     }
                 } else if (listener.type() == CustomUIEventBindingType.ValueChanged) {
-                    String finalValue = null;
+                    Object finalValue = null;
 
                     if (UIEventActions.VALUE_CHANGED.equals(data.action) && effectiveId.equals(target)) {
+                        String rawValue;
                         // If it's a value-changed action, use @Value (RefValue) for specific elements
                         if (element.usesRefValue()) {
-                            finalValue = data.getValue("RefValue");
+                            rawValue = data.getValue("RefValue");
                         } else {
-                            finalValue = data.getValue("Value");
+                            rawValue = data.getValue("Value");
+                        }
+
+                        if (rawValue != null) {
+                            if (element instanceof NumberFieldBuilder) {
+                                try {
+                                    finalValue = Double.parseDouble(rawValue);
+                                } catch (NumberFormatException ignored) {
+                                }
+                            } else if (element instanceof CheckBoxBuilder) {
+                                finalValue = Boolean.parseBoolean(rawValue);
+                            } else {
+                                finalValue = rawValue;
+                            }
+                        }
+
+                        if (finalValue != null && element.getId() != null) {
+                            elementValues.put(element.getId(), finalValue);
                         }
                     }
 
                     if (finalValue != null) {
-                        if (element instanceof NumberFieldBuilder) {
-                            try {
-                                Double dValue = Double.parseDouble(finalValue);
-                                ((UIEventListener<Double>) listener).callback().accept(dValue);
-                            } catch (NumberFormatException ignored) {
-                            }
-                        } else if (element instanceof CheckBoxBuilder) {
-                            Boolean bValue = Boolean.parseBoolean(finalValue);
-                            ((UIEventListener<Boolean>) listener).callback().accept(bValue);
-                        } else {
-                            ((UIEventListener<String>) listener).callback().accept(finalValue);
-                        }
+                        ((UIEventListener<Object>) listener).callback().accept(finalValue, this);
                     }
                 }
             }

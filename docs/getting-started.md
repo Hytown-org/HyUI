@@ -305,3 +305,22 @@ public class HyUITestGuiCommand extends AbstractAsyncCommand {
     }
 }
 ```
+
+#### 9. Interacting with Elements at Runtime
+
+Mod authors can access the current values of other elements on the page within event listeners using the `UIContext` parameter.
+
+```java
+.addChild(ButtonBuilder.textButton()
+    .withId("SubmitButton")
+    .withText("Submit")
+    .addEventListener(CustomUIEventBindingType.Activating, (ignored, ctx) -> {
+        // Access value by ID set via .withId()
+        String username = ctx.getValue("UsernameField", String.class).orElse("");
+        Boolean rememberMe = ctx.getValue("RememberCheckBox", Boolean.class).orElse(false);
+        
+        playerRef.sendMessage(Message.raw("Logging in as: " + username + " (Remember: " + rememberMe + ")"));
+    }))
+```
+
+The `UIContext` tracks values of elements that support them (TextField, NumberField, CheckBox, ColorPicker) automatically as they change in the UI. Values are initialized with whatever was set via `.withValue()` at build time.

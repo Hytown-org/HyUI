@@ -2,6 +2,7 @@ package au.ellie.hyui.builders;
 
 import au.ellie.hyui.HyUIPlugin;
 import au.ellie.hyui.theme.Theme;
+import au.ellie.hyui.events.UIContext;
 import au.ellie.hyui.events.UIEventListener;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Consumer;
 
 /**
@@ -28,6 +30,7 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
     protected HyUIStyle hyUIStyle;
     protected final List<UIEventListener<?>> listeners = new ArrayList<>();
     protected final List<UIElementBuilder<?>> children = new ArrayList<>();
+    protected Object initialValue;
     protected String parentSelector = "#Content";
     protected String typeSelector;
     protected boolean wrapInGroup = false;
@@ -325,6 +328,12 @@ public abstract class UIElementBuilder<T extends UIElementBuilder<T>> {
 
     @SuppressWarnings("unchecked")
     protected <V> T addEventListenerInternal(CustomUIEventBindingType type, Consumer<V> callback) {
+        this.listeners.add(new UIEventListener<>(type, (val, ctx) -> ((Consumer<Object>) callback).accept(val)));
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <V> T addEventListenerInternal(CustomUIEventBindingType type, BiConsumer<V, UIContext> callback) {
         this.listeners.add(new UIEventListener<>(type, callback));
         return (T) this;
     }

@@ -1,7 +1,7 @@
 package au.ellie.hyui.events;
 
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
-public record UIEventListener<V>(CustomUIEventBindingType type, Consumer<V> callback) {
+public record UIEventListener<V>(CustomUIEventBindingType type, BiConsumer<V, UIContext> callback) {
 }
