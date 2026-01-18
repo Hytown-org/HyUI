@@ -25,12 +25,9 @@ import java.util.function.Consumer;
 /**
  * A convenient builder to help you construct a custom Page for Hytale and open it.
  */
-public class PageBuilder {
+public class PageBuilder extends InterfaceBuilder<PageBuilder> {
     private final PlayerRef playerRef;
     private CustomPageLifetime lifetime = CustomPageLifetime.CanDismiss;
-    private final Map<String, UIElementBuilder<?>> elementRegistry = new LinkedHashMap<>();
-    private final List<Consumer<UICommandBuilder>> editCallbacks = new ArrayList<>();
-    private String uiFile;
 
     /**
      * Constructs a new instance of the PageBuilder class.
@@ -84,157 +81,6 @@ public class PageBuilder {
     }
 
     /**
-     * Specifies the path to a UI file that will be used as a placeholder/base by the page.
-     *
-     * @param uiFile The file path of the UI layout to load as placeholder/base.
-     * @return The current instance of the PageBuilder to allow for method chaining.
-     */
-    public PageBuilder fromFile(String uiFile) {
-        this.uiFile = uiFile;
-        return this;
-    }
-
-    /**
-     * Specifies the (html) HYUIML contents to parse to HyUI PageBuilder.
-     * 
-     * @param html
-     * @return
-     */
-    public PageBuilder fromHtml(String html) {
-        new HtmlParser().parseToPage(this, html);
-        return this;
-    }
-    /**
-     * Adds a UI element to the page being built.
-     *
-     * @param element The UIElementBuilder instance representing the UI element to add.
-     * @return The current instance of the PageBuilder to allow for method chaining.
-     */
-    public PageBuilder addElement(UIElementBuilder<?> element) {
-        // Elements are always added to the #HyUIRoot group in the placeholder.
-        element.inside("#HyUIRoot");
-        registerElement(element);
-        return this;
-    }
-
-    private void registerElement(UIElementBuilder<?> element) {
-        if (element.getId() != null) {
-            this.elementRegistry.put(element.getId(), element);
-        }
-        for (UIElementBuilder<?> child : element.children) {
-            registerElement(child);
-        }
-    }
-
-    /**
-     * Retrieves an element builder by its ID.
-     *
-     * @param id    The ID of the element to retrieve.
-     * @param clazz The class of the builder to cast to.
-     * @param <T>   The type of the builder.
-     * @return An Optional containing the builder if found and of the correct type, otherwise empty.
-     */
-    public <T extends UIElementBuilder<T>> Optional<T> getById(String id, Class<T> clazz) {
-        UIElementBuilder<?> builder = elementRegistry.get(id);
-        if (builder != null && clazz.isInstance(builder)) {
-            return Optional.of(clazz.cast(builder));
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * Adds an event listener to an element by its ID.
-     * If no ID is found it will throw an IllegalArgumentException.
-     * 
-     * @param id       The ID of the element.
-     * @param type     The event type.
-     * @param valueClass The class of the value expected in the callback.
-     * @param callback The callback function.
-     * @param <V>      The type of the value.
-     * @return The current PageBuilder instance.
-     */
-    public <V> PageBuilder addEventListener(String id, CustomUIEventBindingType type, Class<V> valueClass, Consumer<V> callback) {
-        UIElementBuilder<?> element = elementRegistry.get(id);
-        if (element == null) {
-            throw new IllegalArgumentException("No element found with ID '" + id + "'. Please check your UI builder for elements with this ID to see if you misspelt the name.");
-        }
-        element.addEventListener(type, valueClass, callback);
-        return this;
-    }
-
-    /**
-     * Adds an event listener to an element by its ID with a default Object type.
-     * If no ID is found it will throw an IllegalArgumentException.
-     * 
-     * @param id       The ID of the element.
-     * @param type     The event type.
-     * @param callback The callback function.
-     * @return The current PageBuilder instance.
-     */
-    public PageBuilder addEventListener(String id, CustomUIEventBindingType type, Consumer<Object> callback) {
-        return addEventListener(id, type, Object.class, callback);
-    }
-
-    /**
-     * Adds an event listener with context to an element by its ID.
-     * If no ID is found it will throw an IllegalArgumentException.
-     * 
-     * @param id       The ID of the element.
-     * @param type     The event type.
-     * @param valueClass The class of the value expected in the callback.
-     * @param callback The callback function.
-     * @param <V>      The type of the value.
-     * @return The current PageBuilder instance.
-     */
-    public <V> PageBuilder addEventListener(String id, CustomUIEventBindingType type, Class<V> valueClass, BiConsumer<V, UIContext> callback) {
-        UIElementBuilder<?> element = elementRegistry.get(id);
-        if (element == null) {
-            throw new IllegalArgumentException("No element found with ID '" + id + "'. Please check your UI builder for elements with this ID to see if you misspelt the name.");
-        }
-        element.addEventListenerWithContext(type, valueClass, callback);
-        return this;
-    }
-
-    /**
-     * Adds an event listener with context and default Object type to an element by its ID.
-     * If no ID is found it will throw an IllegalArgumentException.
-     * 
-     * @param id       The ID of the element.
-     * @param type     The event type.
-     * @param callback The callback function.
-     * @return The current PageBuilder instance.
-     */
-    public PageBuilder addEventListener(String id, CustomUIEventBindingType type, BiConsumer<Object, UIContext> callback) {
-        return addEventListener(id, type, Object.class, callback);
-    }
-
-    /**
-     * Adds a callback function that can be used to modify an existing placeholder UI element
-     * via a provided {@link UICommandBuilder}.
-     * 
-     * You should use editBeforeElement/editAfterElement on builders if you want to edit
-     * the HyUI elements before or after creation.
-     *
-     * @param callback A Consumer that accepts a {@code UICommandBuilder} instance
-     *                 and defines the modifications to be made to the UI element.
-     * @return The current instance of the PageBuilder to allow for method chaining.
-     */
-    public PageBuilder editElement(Consumer<UICommandBuilder> callback) {
-        this.editCallbacks.add(callback);
-        return this;
-    }
-
-    private List<UIElementBuilder<?>> getTopLevelElements() {
-        List<UIElementBuilder<?>> topLevel = new ArrayList<>();
-        for (UIElementBuilder<?> element : elementRegistry.values()) {
-            if ("#HyUIRoot".equals(element.parentSelector)) {
-                topLevel.add(element);
-            }
-        }
-        return topLevel;
-    }
-
-    /**
      * Opens a custom UI page for the associated player using the provided store.
      * This method retrieves the player's page manager and creates a new instance
      * of the HyUIPage based on the specified parameters and fields defined in the
@@ -263,5 +109,4 @@ public class PageBuilder {
         PageManager pageManager = playerComponent.getPageManager();
         pageManager.openCustomPage(playerRefParam.getReference(), store, new HyUIPage(playerRefParam, lifetime, uiFile, getTopLevelElements(), editCallbacks));
     }
-    
 }

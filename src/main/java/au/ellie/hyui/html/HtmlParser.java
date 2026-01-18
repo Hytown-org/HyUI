@@ -2,6 +2,7 @@ package au.ellie.hyui.html;
 
 import au.ellie.hyui.HyUIPlugin;
 import au.ellie.hyui.builders.LabelBuilder;
+import au.ellie.hyui.builders.InterfaceBuilder;
 import au.ellie.hyui.builders.PageBuilder;
 import au.ellie.hyui.builders.UIElementBuilder;
 import au.ellie.hyui.html.handlers.*;
@@ -36,14 +37,14 @@ public class HtmlParser {
     public void registerHandler(TagHandler handler) {
         handlers.add(handler);
     }
-
+    
     /**
-     * Parses the HTML string and adds elements to the PageBuilder.
+     * Parses the HTML string and adds elements to the InterfaceBuilder.
      *
-     * @param builder The PageBuilder to add elements to.
+     * @param builder The InterfaceBuilder to add elements to.
      * @param html    The HTML string to parse.
      */
-    public void parseToPage(PageBuilder builder, String html) {
+    public void parseToInterface(InterfaceBuilder<?> builder, String html) {
         List<UIElementBuilder<?>> elements = parse(html);
         for (UIElementBuilder<?> element : elements) {
             builder.addElement(element);
