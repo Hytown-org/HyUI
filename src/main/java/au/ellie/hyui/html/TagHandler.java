@@ -70,6 +70,13 @@ public interface TagHandler {
     }
 
     private void applyStyles(UIElementBuilder<?> builder, Map<String, String> styles) {
+        // Special handling for buttons - collect all pseudo-states
+        if (builder instanceof au.ellie.hyui.builders.ButtonBuilder) {
+            applyButtonStyles(builder, styles);
+            return;
+        }
+        
+        // For non-buttons, apply styles normally
         HyUIStyle hyStyle = new HyUIStyle();
         HyUIAnchor anchor = new HyUIAnchor();
         boolean hasStyle = false;
@@ -78,24 +85,42 @@ public interface TagHandler {
         for (Map.Entry<String, String> entry : styles.entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue();
+            
+            // Skip pseudo-state properties for non-buttons
+            if (key.startsWith("--hover-") || key.startsWith("--pressed-") || 
+                key.startsWith("--active-") || key.startsWith("--disabled-")) {
+                continue;
+            }
 
             switch (key) {
                 case "color":
                     hyStyle.setTextColor(value);
                     hasStyle = true;
                     break;
+                case "background":
+                case "background-color":
+                    // Groups/Containers can have Background set directly
+                    builder.editElementAfter((commandBuilder, selector) -> {
+                        commandBuilder.set(selector + ".Background", value);
+                    });
+                    break;
                 case "font-size":
-                    hyStyle.setFontSize(value);
-                    hasStyle = true;
+                    // Font size doesn't work on buttons, only on labels
+                    if (!(builder instanceof au.ellie.hyui.builders.ButtonBuilder)) {
+                        hyStyle.setFontSize(value);
+                        hasStyle = true;
+                    }
                     break;
                 case "font-weight":
-                    if (value.equalsIgnoreCase("bold")) {
+                    // Bold doesn't work on buttons, only on labels
+                    if (value.equalsIgnoreCase("bold") && !(builder instanceof au.ellie.hyui.builders.ButtonBuilder)) {
                         hyStyle.setRenderBold(true);
                         hasStyle = true;
                     }
                     break;
                 case "text-transform":
-                    if (value.equalsIgnoreCase("uppercase")) {
+                    // Uppercase doesn't work on buttons, only on labels
+                    if (value.equalsIgnoreCase("uppercase") && !(builder instanceof au.ellie.hyui.builders.ButtonBuilder)) {
                         hyStyle.setRenderUppercase(true);
                         hasStyle = true;
                     }
@@ -181,6 +206,25 @@ public interface TagHandler {
                         hasAnchor = true;
                     } catch (NumberFormatException ignored) {}
                     break;
+                case "padding":
+                    // Padding only works on containers (Groups), not buttons or labels
+                    // Only apply if this is a GroupBuilder
+                    if (builder instanceof au.ellie.hyui.builders.GroupBuilder) {
+                        builder.editElementAfter((commandBuilder, selector) -> {
+                            String[] parts = value.trim().split("\\s+");
+                            if (parts.length == 1) {
+                                // All sides
+                                commandBuilder.set(selector + ".Padding", "(Left: " + parts[0] + ", Top: " + parts[0] + ", Right: " + parts[0] + ", Bottom: " + parts[0] + ")");
+                            } else if (parts.length == 2) {
+                                // top/bottom left/right
+                                commandBuilder.set(selector + ".Padding", "(Left: " + parts[1] + ", Top: " + parts[0] + ", Right: " + parts[1] + ", Bottom: " + parts[0] + ")");
+                            } else if (parts.length == 4) {
+                                // top right bottom left
+                                commandBuilder.set(selector + ".Padding", "(Left: " + parts[3] + ", Top: " + parts[0] + ", Right: " + parts[1] + ", Bottom: " + parts[2] + ")");
+                            }
+                        });
+                    }
+                    break;
             }
         }
 
@@ -189,6 +233,111 @@ public interface TagHandler {
         }
         if (hasAnchor) {
             builder.withAnchor(anchor);
+        }
+    }
+
+    /**
+     * Applies button-specific styles including pseudo-states.
+     * Supports CSS custom properties for states:
+     * - Default: background, color, font-size, font-weight, text-transform
+     * - Hover: --hover-background, --hover-color, etc.
+     * - Pressed: --pressed-background, --pressed-color, etc.
+     * - Disabled: --disabled-background, --disabled-color, etc.
+     */
+    private void applyButtonStyles(UIElementBuilder<?> builder, Map<String, String> styles) {
+        // Separate styles by state
+        Map<String, String> defaultStyles = new HashMap<>();
+        Map<String, String> hoverStyles = new HashMap<>();
+        Map<String, String> pressedStyles = new HashMap<>();
+        Map<String, String> disabledStyles = new HashMap<>();
+        
+        // Other non-button-style properties (padding, anchor, etc.)
+        HyUIAnchor anchor = new HyUIAnchor();
+        boolean hasAnchor = false;
+        
+        for (Map.Entry<String, String> entry : styles.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            
+            if (key.startsWith("--hover-")) {
+                // --hover-background -> background
+                String prop = key.substring(8); // Remove "--hover-"
+                hoverStyles.put(prop, value);
+            } else if (key.startsWith("--pressed-") || key.startsWith("--active-")) {
+                // --pressed-background or --active-background -> background
+                String prop = key.startsWith("--pressed-") ? key.substring(10) : key.substring(9);
+                pressedStyles.put(prop, value);
+            } else if (key.startsWith("--disabled-")) {
+                // --disabled-background -> background
+                String prop = key.substring(11); // Remove "--disabled-"
+                disabledStyles.put(prop, value);
+            } else if (key.startsWith("anchor-")) {
+                // Handle anchor properties
+                String anchorProp = key.substring(7); // Remove "anchor-"
+                Integer intValue = parseInt(value);
+                if (intValue != null) {
+                    switch (anchorProp) {
+                        case "top": anchor.setTop(intValue); hasAnchor = true; break;
+                        case "left": anchor.setLeft(intValue); hasAnchor = true; break;
+                        case "right": anchor.setRight(intValue); hasAnchor = true; break;
+                        case "bottom": anchor.setBottom(intValue); hasAnchor = true; break;
+                        case "width": anchor.setWidth(intValue); hasAnchor = true; break;
+                        case "height": anchor.setHeight(intValue); hasAnchor = true; break;
+                    }
+                }
+            } else if (key.equals("flex-weight")) {
+                try {
+                    builder.withFlexWeight(Integer.parseInt(value));
+                } catch (NumberFormatException ignored) {}
+            } else if (key.equals("layout-mode") || key.equals("layout")) {
+                // Skip - not applicable to buttons
+            } else if (key.equals("padding")) {
+                // Skip - buttons don't support padding directly
+            } else {
+                // Default state properties
+                defaultStyles.put(key, value);
+            }
+        }
+        
+        // Apply anchor if we have any
+        if (hasAnchor) {
+            builder.withAnchor(anchor);
+        }
+        
+        // Store the generated style DSL for later use
+        // We'll apply it by defining a local style variable and using it
+        String styleDsl = ButtonStyleGenerator.generateTextButtonStyleDsl(
+            defaultStyles.isEmpty() ? null : defaultStyles,
+            hoverStyles.isEmpty() ? null : hoverStyles,
+            pressedStyles.isEmpty() ? null : pressedStyles,
+            disabledStyles.isEmpty() ? null : disabledStyles
+        );
+        
+        if (styleDsl != null) {
+            // We need to inject the style as part of the button definition via appendInline
+            // This is a limitation: we can't set Style dynamically, only via .ui files or inline DSL
+            // For now, store it in the builder for potential future use
+            builder.editElementBefore((commandBuilder, selector) -> {
+                // Inject a style definition inline before the button
+                // Format: @CustomButtonStyle = TextButtonStyle(...);
+                String styleVarName = "CustomStyle" + Math.abs(selector.hashCode());
+                commandBuilder.appendInline(selector.substring(0, selector.lastIndexOf(" ")), 
+                    "@" + styleVarName + " = " + styleDsl + ";");
+            });
+            
+            // Then set the button to use that style
+            builder.editElementAfter((commandBuilder, selector) -> {
+                String styleVarName = "CustomStyle" + Math.abs(selector.hashCode());
+                commandBuilder.set(selector + ".Style", "$." + styleVarName);
+            });
+        }
+    }
+    
+    private Integer parseInt(String value) {
+        try {
+            return Integer.parseInt(value.replaceAll("[^0-9-]", ""));
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
